@@ -1,0 +1,6 @@
+colorama==0.4.6
+openai==1.23.6
+pyperclip==1.8.2
+regex==2024.4.16
+Requests==2.31.0
+rich==13.7.1

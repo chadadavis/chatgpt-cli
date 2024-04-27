@@ -1,4 +1,4 @@
-#!/usr/bin/env /home/chdavis/git/junk/python/venv/bin/python
+#!/usr/bin/env /home/chdavis/git/chatgpt-cli/.venv/bin/python
 
 # Alternatives to this script:
 # https://github.com/kharvd/gpt-cli
@@ -339,8 +339,7 @@ def hr():
 
 def set_terminal_title(string=''):
     prefix = 'chatgpt-cli'
-    if string:
-        string = ' - ' + string
+    string = ' - ' + string
     sys.stdout.write('\x1b]2;' + prefix + string + '\x07')
 
 
