@@ -632,6 +632,7 @@ if select.select([sys.stdin,],[],[],0.0)[0]:
 if not args.interactive:
     # Just print the response, unformatted, and exit
     if response := get_response(init_input, key=key, model=args.model):
+        print()
         render(response)
 
     sys.exit()
