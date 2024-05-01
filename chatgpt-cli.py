@@ -112,6 +112,7 @@ import rich.console
 import rich.markdown
 from colorama import Back, Fore, Style
 import pyperclip
+from unidecode import unidecode
 
 
 INDENT = 0
@@ -131,7 +132,10 @@ rich_console = rich.console.Console()
 LEN_THRESH = 8
 
 def tokenize(*strings):
-    """Return a prioritized list of unique tokens from strings.
+    """Return a prioritized list of (long-ish) unique tokens from strings.
+
+    Sequences of tokens in Title Case are kept as one token. That's useful for
+    acronyms and proper nouns (eg names of people, organizations, etc)
     """
     counts = {}
     for s in strings:
@@ -143,6 +147,13 @@ def tokenize(*strings):
             if len(t) < LEN_THRESH: continue
             t = t.lower()
             counts[t] = counts.get(t, 0) + 1
+        # And find all occurrences of Multiple Capitals (eg. 'United Nations')
+        # And add those as single tokens, so 'uni<TAB>' will complete to 'United Nations'
+        for term in regex.findall(r'((?:\p{Uppercase_Letter}\p{Lowercase_Letter}+\s*){2,})', s) :
+            term = term.rstrip()
+            if len(term) < LEN_THRESH: continue
+            counts[term] = counts.get(term, 0) + 1
+
     return sorted(counts.keys(), key=lambda x: counts[x], reverse=True)
 
 
@@ -267,17 +278,28 @@ def editor(content_a: str='', /) -> str:
 # TODO put this in a class, and maintain the state there, eg a dict/priority queue
 # And then just send new strings to it to be tokenized
 # Alt. modules on PyPI ? https://pypi.org/search/?q=autocomplete
-def completer(text: str, state: int) -> Optional[str]:
+def completer(prefix: str, state: int) -> str | None :
+    """"Tab-completion for readline
+
+    Completes tokens from:
+    user's readline history, assistant responses, /commands, file names, model names.
+
+    History/conversation tokens are prioritized by frequency/length.
+
+    Matches are accent-insensitive, but accent-preserving.
+    Matches are case-insensitive, and not case-preserving.
+    (unless multi-word, eg. proper nouns)
+
+    """
     completions = []
-    if not text:
+    if not prefix:
         return None
 
     # Completions via (current) history session
     # But, we might want to have /commands in the history still
     items = [ rl.get_history_item(i) for i in range(1, rl.get_current_history_length() + 1)]
     for t in tokenize(*items):
-        # print(f'hist:{t}:')
-        if t.casefold().startswith(text.casefold()):
+        if unidecode(t).casefold().startswith(unidecode(prefix).casefold()):
             completions.append(t)
 
     # TODO merge history/messages, since they're overlapping?
@@ -289,32 +311,32 @@ def completer(text: str, state: int) -> Optional[str]:
     items = [ m['content'] for m in messages if m['role'] == 'assistant' ]
     for t in tokenize(*items):
         # print(f'msg:{t}:')
-        if t.casefold().startswith(text.casefold()):
+        if unidecode(t).casefold().startswith(unidecode(prefix).casefold()):
             completions.append(t)
 
-    # Complete user /commands
+    # Complete /command names
     global commands
     # NB, make sure that completer_delims doesn't contain '/'
-    if text.startswith('/'):
+    if prefix.startswith('/'):
         completions += [
-            '/' + cmd for cmd in commands if cmd.casefold().startswith(text[1:].casefold())
+            '/' + cmd for cmd in commands if cmd.casefold().startswith(prefix[1:].casefold())
         ]
-    elif '/' in text:
+    elif '/' in prefix:
         # Complete file names matching ${text}*
-        bn = os.path.basename(text)
-        dir = os.path.dirname(text)
+        bn = os.path.basename(prefix)
+        dir = os.path.dirname(prefix)
         if dir != '/': dir += '/'
         # print(f'\n{dir=}')
         # print(f'\n{bn=}')
         for file in os.listdir(dir):
-            if not bn or file.casefold().startswith(bn.casefold()):
+            if not bn or unidecode(file).casefold().startswith(unidecode(bn).casefold()):
                 if os.path.isdir(dir+file): file += '/'
                 # print(f'\n{file=}')
                 completions.append(dir + file)
 
     # Complete model names
     for m in commands['model']['choices']:
-        if m.casefold().startswith(text):
+        if m.casefold().startswith(prefix):
             completions.append(m)
 
     if state < len(completions):
