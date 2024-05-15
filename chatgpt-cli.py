@@ -24,6 +24,7 @@ BACKLOG = ...
 # https://platform.openai.com/docs/assistants/overview
 # But then can I still use the normal Chat API, or do I need to use the Assistant API for everything?
 # https://platform.openai.com/docs/assistants/overview?context=with-streaming
+# https://platform.openai.com/docs/assistants/whats-new
 
 # logging/history of conversations/threads
 # (keep in sync with readline history?)
@@ -391,6 +392,10 @@ def usage():
 # TODO also dispatch to the methods that process the args
 # TODO add an option to show/edit instructions? (easier to leave as CLI arg?)
 # TODO option to set/(re-)generate the /topic of the conversation (store in history?)
+# TODO add a /memory command to add/delete/list user-specific factoids (beyond custom instructions)
+# Or easier to just append to custom instructions?
+# cf. https://openai.com/index/memory-and-new-controls-for-chatgpt/
+# Or just rename custom-instructions to 'context' or 'background' or 'global' or 'prefs' or so.
 commands = {}
 commands['clear'] = {
     'desc': 'Clear the conversation history',
@@ -417,54 +422,7 @@ commands['msgs'] = commands['messages']
 commands['model'] = {
     'desc': 'Get/set the OpenAI model to target',
     'example': '/model gpt-4-turbo',
-    'choices':['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo'],
-}
-commands['revert'] = {
-    'desc': 'Revert/remove the previous user message (and assistant reply)',
-}
-commands['regenerate'] = {
-    'desc': 'Regenerate the last response, optionally with higher temp. (percent) TODO',
-    'example': '/regenerate 99',
-}
-commands['title'] = {
-    'desc': 'Get/set a (new) title/topic of the conversation/dialogue TODO',
-}
-commands['usage'] = {
-    'desc': 'Show the OpenAI API usage/quota/spend TODO',
-}
-
-
-# User /commands
-# TODO also dispatch to the methods that process the args
-# TODO add an option to show/edit instructions? (easier to leave as CLI arg?)
-# TODO option to set/(re-)generate the /topic of the conversation (store in history?)
-commands = {}
-commands['clear'] = {
-    'desc': 'Clear the conversation history',
-}
-commands['copy'] = {
-    'desc': 'Copy the last assistant response to the clipboard',
-}
-commands['cp'] = commands['copy']
-commands['edit'] = {
-    'desc': 'Edit the last user message in external $EDITOR',
-}
-commands['file'] = {
-    'desc': 'List/attach files to the conversation/dialogue. TODO ',
-    'example': '/file ./data.csv',
-}
-commands['history'] = {
-    'desc': 'List/resume previous conversation/dialogue. TODO ',
-    # 'example': '/history 3',
-}
-commands['messages'] = {
-    'desc': 'List the messages in this conversation/dialogue',
-}
-commands['msgs'] = commands['messages']
-commands['model'] = {
-    'desc': 'Get/set the OpenAI model to target',
-    'example': '/model gpt-4-turbo',
-    'choices':['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo'],
+    'choices':['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo', 'gpt-4o'],
 }
 commands['revert'] = {
     'desc': 'Revert/remove the previous user message (and assistant reply)',
@@ -514,9 +472,9 @@ parser.add_argument(
     '-m',
     '--model',
     type=str,
-    help="OpenAI model to target, eg: gpt-3.5-turbo , gpt-4 , gpt-4-turbo, ",
-    default='gpt-4-turbo',
+    help="OpenAI model to target, eg: gpt-3.5-turbo , gpt-4o , etc ",
     choices=commands['model']['choices'],
+    default=commands['model']['choices'][-1],
 )
 parser.add_argument(
     '--history',
@@ -626,6 +584,8 @@ for file_name in args.file:
     if args.debug :
         info = '\n' + 'INFO: File to analyze: ' + Style.BRIGHT + file_name + '\n'
         print(info, file=sys.stderr)
+    # TODO test the file type, only proceed if it's text/plain
+    
     with open(file_name, 'r') as file:
         messages.append({
             'role': 'system',
