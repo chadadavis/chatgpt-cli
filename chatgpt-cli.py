@@ -21,6 +21,7 @@ BACKLOG = ...
 # $ openai api chat.completions.create -m gpt-4 -g user "list of countries by gdp"
 
 # The Assistants API allows for conversation threads to have an ID (managed server-side) that I could resume ?
+# https://github.com/openai/openai-assistants-quickstart
 # https://platform.openai.com/docs/assistants/overview
 # But then can I still use the normal Chat API, or do I need to use the Assistant API for everything?
 # https://platform.openai.com/docs/assistants/overview?context=with-streaming
@@ -228,7 +229,14 @@ def render(string: str) -> None:
     # print()
 
 
-def get_response(prompt='', /, *, msgs=[], key, model):
+def get_response(
+    prompt='',
+    /,
+    *,
+    msgs=[],
+    key,
+    model,
+    ) -> Optional[str]:
     global messages
     if not msgs:
         msgs = messages
