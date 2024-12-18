@@ -104,6 +104,7 @@ import select
 import subprocess
 import sys
 import textwrap
+import time
 from typing import Optional
 
 import colorama
@@ -252,6 +253,9 @@ def get_response(
         'temperature': 0,
         'model': model,
         'messages': msgs,
+        # TODO the (reasoning) o1(-preview) model(s) can add this:
+        # 'reasoning_effort': 'medium', # low, medium, high
+        # TODO make that a /effort cmd ?
     }
     logging.debug(pp(data))
     response = requests.post(url, data=json.dumps(data), headers=headers)
@@ -430,7 +434,11 @@ commands['msgs'] = commands['messages']
 commands['model'] = {
     'desc': 'Get/set the OpenAI model to target',
     'example': '/model gpt-4-turbo',
-    'choices':['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo', 'gpt-4o'],
+    'choices':['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo', 'gpt-4o', ],
+    # TODO to use (reasoning) models, eg 'o1-preview', the 'system' role has to be renamed to 'developer'
+}
+commands['reload'] = {
+    'desc': 'Reload the CLI',
 }
 commands['revert'] = {
     'desc': 'Revert/remove the previous user message (and assistant reply)',
@@ -453,8 +461,7 @@ parser.add_argument(
     '-k',
     '--keyfile',
     type=str,
-    help="Path to file containing your OpenAI API key, default: ~/.config/chatgpt/api-key.txt",
-    default=os.path.join(os.environ['HOME'], '.config/chatgpt/api-key.txt'),
+    help="Path to file containing your OpenAI API key, else use env var OPENAI_API_KEY",
 )
 parser.add_argument(
     '-i',
@@ -482,6 +489,7 @@ parser.add_argument(
     type=str,
     help="OpenAI model to target, eg: gpt-3.5-turbo , gpt-4o , etc ",
     choices=commands['model']['choices'],
+    # default to most recent model
     default=commands['model']['choices'][-1],
 )
 parser.add_argument(
@@ -546,6 +554,11 @@ rl.set_completer_delims(' ;?!*"\'') # NB, avoid . and / to complete file paths
 # menu-complete: Tab cycles through completions
 rl.parse_and_bind(r'TAB:menu-complete')
 
+# TODO
+# Allow shift-enter to make a soft-return/newline, rather than submitting input ?
+# But this doesn't work:
+# rl.parse_and_bind(r'"\\e[13;2u": "\n"')
+
 # This should allow the user to arbitrarily expand long-words from their previous history
 # But, it seems unsupported in the Python readline.
 # But we can tokenize the history and add it to the completer() manually ...
@@ -560,9 +573,9 @@ if not os.path.isfile(args.history):
 rl.read_history_file(args.history)
 
 # Enable bracketed paste mode (allows pasting multi-line content into the prompt)
-os.system('printf "\e[?2004h"')
-# Disable bracketed paste mode
-# os.system('printf "\e[?2004l"')
+os.system(r'printf "\e[?2004h"')
+# Disable bracketed paste mode ? at the end ?
+# os.system(r'printf "\e[?2004l"')
 
 key = os.environ.get('OPENAI_API_KEY')
 # TODO any way to verify it's a usable key (eg with a test request) ? Like verifying the model name? Or the quota/usage
@@ -570,7 +583,7 @@ if not key:
     try:
         key = open(args.keyfile).read().rstrip()
     except:
-        print('\n' + Fore.RED + "Error: Cannot read OpenAI API key file: " + Fore.WHITE + Style.BRIGHT + args.keyfile + '\n')
+        print('\n' + Fore.RED + "Error: Set OPENAI_API_KEY or provide a keyfile" + '\n')
         parser.print_help()
         exit(1)
 
@@ -699,9 +712,9 @@ while True:
     if False: ...
     elif match := regex.match(r'^\/model\s*([a-z0-9.-]+)?\s*$', user_input):
         # /meta commands
+        print('models: ',   commands['model']['choices'])
         if match.group(1):
             if not match.group(1) in commands['model']['choices']:
-                print('Models:\n',   commands['model']['choices'])
                 continue
             args.model = match.group(1)
         print(Fore.LIGHTBLACK_EX + f"model={args.model}")
@@ -725,6 +738,13 @@ while True:
             rl.remove_history_item(hist_len)
             continue
         rl.add_history(user_input)
+    elif match := regex.match(r'^\/reload\s*$', user_input):
+        # Reload this script/source (for latest changes)
+        # And show the last modification time of this file
+        tl = time.localtime(os.path.getmtime(sys.argv[0]))[0:6]
+        ts = "%04d-%02d-%02d %02d:%02d:%02d" % tl
+        logging.debug(f"{os.getpid()=} mtime={ts} {sys.argv[0]=}")
+        os.execv(sys.argv[0], sys.argv)
     elif match := regex.match(r'^\/revert\s*$', user_input):
         prev = rl.get_history_item(hist_len-1)
         rl.remove_history_item(hist_len-1) # Remove the /revert command
