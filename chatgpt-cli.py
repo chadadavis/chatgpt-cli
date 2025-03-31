@@ -20,6 +20,9 @@ BACKLOG = ...
 # $ export OPENAI_API_KEY=$(cat your_key.txt)
 # $ openai api chat.completions.create -m gpt-4 -g user "list of countries by gdp"
 
+# Create a new project, and key, for the EU zone:
+# https://help.openai.com/en/articles/9186755-managing-projects-in-the-api-platform
+
 # The Assistants API allows for conversation threads to have an ID (managed server-side) that I could resume ?
 # https://github.com/openai/openai-assistants-quickstart
 # https://platform.openai.com/docs/assistants/overview
@@ -44,6 +47,9 @@ BACKLOG = ...
 # Readline:
 # complete words from the conversation history?
 # Do I need to manually keep my own dict of (long) words (without punctuation) ?
+
+# Consider a TUI / Text UI lib, eg:
+# https://realpython.com/contact-book-python-textual/
 
 # Consider using the streaming API ? (To get incremental output/typing, like the web version)
 # https://cookbook.openai.com/examples/how_to_stream_completions
