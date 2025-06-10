@@ -10,6 +10,9 @@
 # https://github.com/openai/openai-python
 # https://github.com/openai/openai-cookbook/blob/main/examples/How_to_format_inputs_to_ChatGPT_models.ipynb
 
+# Check / add credit:
+# https://platform.openai.com/settings/organization/billing/overview
+
 BACKLOG = ...
 # TODO backlog
 
@@ -440,8 +443,7 @@ commands['msgs'] = commands['messages']
 commands['model'] = {
     'desc': 'Get/set the OpenAI model to target',
     'example': '/model gpt-4-turbo',
-    'choices':['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo', 'gpt-4o', ],
-    # TODO to use (reasoning) models, eg 'o1-preview', the 'system' role has to be renamed to 'developer'
+    'choices':['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo', 'gpt-4o', 'gpt-4.1'],
 }
 commands['reload'] = {
     'desc': 'Reload the CLI',
